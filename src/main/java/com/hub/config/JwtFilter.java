@@ -1,10 +1,13 @@
 // backend/src/main/java/com/hub/config/JwtFilter.java
 package com.hub.config;
 
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +20,9 @@ import java.util.List;
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -26,17 +32,24 @@ public class JwtFilter extends OncePerRequestFilter {
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            // Mock: accept any non-empty Bearer token
-            String token = authHeader.substring(7);
-            if (!token.isBlank()) {
-                // In production replace with real JWT validation
+            try {
+                String token = authHeader.substring(7);
+                JwtParser parser = Jwts.parserBuilder()
+                        .setSigningKey(Keys.hmacShaKeyFor(jwtSecret.getBytes()))
+                        .build();
+                Claims claims = parser.parseClaimsJws(token).getBody();
+                String userId = claims.getSubject();
+
                 UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
-                        "mock-user-id",
+                        userId,
                         null,
                         List.of(new SimpleGrantedAuthority("ROLE_USER"))
                     );
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+            } catch (JwtException e) {
+                res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
+                return;
             }
         }
 

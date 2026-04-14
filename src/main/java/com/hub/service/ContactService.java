@@ -28,25 +28,22 @@ public class ContactService {
     private final UserRepository userRepository;
     private final ContactMapper mapper;
 
-    // Resolve user — in production, derive userId from JWT principal.
-    // For local testing, we use a fixed mock UUID or look up by mock user ID.
-    private static final UUID MOCK_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
-
+    // Resolve user — principal is now the UUID string from the JWT subject
     private UUID resolveUserId(String principal) {
-        // principal is "mock-user-id" string set by JwtFilter
-        return MOCK_USER_ID;
+        return UUID.fromString(principal);
     }
 
     private User getOrCreateMockUser() {
-        return userRepository.findById(MOCK_USER_ID).orElseGet(() -> {
-            User user = User.builder()
-                .id(MOCK_USER_ID)
-                .name("Mock User")
-                .email("mock@contacthub.dev")
+        // This method is no longer needed for production, but kept for backward compatibility
+        User user = userRepository.findAll().stream().findFirst().orElseGet(() -> {
+            User newUser = User.builder()
+                .name("Default User")
+                .email("default@contacthub.dev")
                 .passwordHash("$2a$10$placeholder")
                 .build();
-            return userRepository.save(user);
+            return userRepository.save(newUser);
         });
+        return user;
     }
 
     @Transactional(readOnly = true)
@@ -82,7 +79,9 @@ public class ContactService {
     }
 
     public ContactResponseDTO create(String principal, ContactRequestDTO req) {
-        User user = getOrCreateMockUser();
+        UUID userId = resolveUserId(principal);
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Contact contact = Contact.builder().user(user).build();
         mapper.applyRequest(req, contact);
         return mapper.toResponse(contactRepository.save(contact));
