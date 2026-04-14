@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
@@ -23,7 +23,7 @@ import java.util.Optional;
 public class AuthController {
 
     private final UserRepository userRepository;
-    private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -48,7 +48,7 @@ public class AuthController {
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
-                .passwordHash(bCryptPasswordEncoder.encode(request.getPassword()))
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .build();
         userRepository.save(user);
 
@@ -69,7 +69,7 @@ public class AuthController {
         User user = userOpt.get();
 
         // Verify password
-        if (!bCryptPasswordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new AuthResponseDTO(null, "Invalid email or password"));
         }
