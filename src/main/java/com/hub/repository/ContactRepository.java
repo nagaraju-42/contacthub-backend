@@ -25,4 +25,25 @@ public interface ContactRepository extends JpaRepository<Contact, UUID> {
     Page<Contact> searchByUserIdAndName(@Param("userId") UUID userId,
                                         @Param("query") String query,
                                         Pageable pageable);
+
+    Page<Contact> findByUserIdAndIsFavoriteTrue(UUID userId, Pageable pageable);
+
+    Page<Contact> findByUserIdAndGroupName(UUID userId, Contact.GroupName groupName, Pageable pageable);
+
+    @Query("SELECT c FROM Contact c WHERE c.user.id = :userId " +
+           "AND c.groupName = :groupName " +
+           "AND (LOWER(c.firstName) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           "OR LOWER(c.lastName) LIKE LOWER(CONCAT('%', :query, '%')))")
+    Page<Contact> searchByUserIdGroupAndName(@Param("userId") UUID userId,
+                                             @Param("groupName") Contact.GroupName groupName,
+                                             @Param("query") String query,
+                                             Pageable pageable);
+
+    @Query("SELECT c FROM Contact c WHERE c.user.id = :userId " +
+           "AND c.isFavorite = true " +
+           "AND (LOWER(c.firstName) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           "OR LOWER(c.lastName) LIKE LOWER(CONCAT('%', :query, '%')))")
+    Page<Contact> searchByUserIdFavoritesAndName(@Param("userId") UUID userId,
+                                                 @Param("query") String query,
+                                                 Pageable pageable);
 }

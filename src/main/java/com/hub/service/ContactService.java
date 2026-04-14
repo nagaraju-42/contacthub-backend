@@ -49,14 +49,40 @@ public class ContactService {
     @Transactional(readOnly = true)
     public PagedResponseDTO<ContactResponseDTO> getAll(String principal,
                                                         int page, int size,
-                                                        String search) {
+                                                        String search,
+                                                        String group,
+                                                        Boolean favorite) {
         UUID userId = resolveUserId(principal);
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Contact> contactPage;
 
-        if (search != null && !search.isBlank()) {
+        // Handle favorite filter
+        if (favorite != null && favorite) {
+            if (search != null && !search.isBlank()) {
+                contactPage = contactRepository.searchByUserIdFavoritesAndName(userId, search.trim(), pageable);
+            } else {
+                contactPage = contactRepository.findByUserIdAndIsFavoriteTrue(userId, pageable);
+            }
+        }
+        // Handle group filter
+        else if (group != null && !group.isBlank()) {
+            try {
+                Contact.GroupName groupName = Contact.GroupName.valueOf(group.toUpperCase());
+                if (search != null && !search.isBlank()) {
+                    contactPage = contactRepository.searchByUserIdGroupAndName(userId, groupName, search.trim(), pageable);
+                } else {
+                    contactPage = contactRepository.findByUserIdAndGroupName(userId, groupName, pageable);
+                }
+            } catch (IllegalArgumentException e) {
+                contactPage = Page.empty(pageable);
+            }
+        }
+        // No filters, just search if provided
+        else if (search != null && !search.isBlank()) {
             contactPage = contactRepository.searchByUserIdAndName(userId, search.trim(), pageable);
-        } else {
+        }
+        // No filters at all
+        else {
             contactPage = contactRepository.findByUserId(userId, pageable);
         }
 
