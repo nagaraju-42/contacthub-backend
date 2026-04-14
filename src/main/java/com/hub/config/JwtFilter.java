@@ -48,7 +48,7 @@ public class JwtFilter extends OncePerRequestFilter {
                     );
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (JwtException e) {
-                res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
                 return;
             }
         }
